@@ -104,6 +104,30 @@ err:
 	return false;
 }
 
+static inline bool parse_lowerdev(uint32_t *lowerdev, uint32_t *flags, const char *value)
+{
+	unsigned long ret;
+	char *end;
+	int base = 10;
+
+	if (!strcasecmp(value, "off")) {
+		*lowerdev = 0;
+		*flags |= WGDEVICE_HAS_LOWERDEV;
+		return true;
+	}
+
+        *lowerdev = if_nametoindex(value);
+        if (*lowerdev == 0)
+           goto err;
+
+	*flags |= WGDEVICE_HAS_LOWERDEV;
+	return true;
+err:
+	fprintf(stderr, "lowerdev is neither off nor an ifindex: `%s' errno: %d\n",
+                value, errno);
+	return false;
+}
+
 static inline bool parse_key(uint8_t key[static WG_KEY_LEN], const char *value)
 {
 	if (!key_from_base64(key, value)) {
@@ -446,6 +470,8 @@ static bool process_line(struct config_ctx *ctx, const char *line)
 			ret = parse_port(&ctx->device->listen_port, &ctx->device->flags, value);
 		else if (key_match("FwMark"))
 			ret = parse_fwmark(&ctx->device->fwmark, &ctx->device->flags, value);
+		else if (key_match("LowerDev"))
+			ret = parse_lowerdev(&ctx->device->lowerdev, &ctx->device->flags, value);
 		else if (key_match("PrivateKey")) {
 			ret = parse_key(ctx->device->private_key, value);
 			if (ret)
@@ -523,7 +549,8 @@ bool config_read_init(struct config_ctx *ctx, bool append)
 		return false;
 	}
 	if (!append)
-		ctx->device->flags |= WGDEVICE_REPLACE_PEERS | WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_FWMARK | WGDEVICE_HAS_LISTEN_PORT;
+		ctx->device->flags |= WGDEVICE_REPLACE_PEERS | WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_FWMARK
+                   | WGDEVICE_HAS_LOWERDEV | WGDEVICE_HAS_LISTEN_PORT;
 	return true;
 }
 
@@ -579,6 +606,11 @@ struct wgdevice *config_read_cmd(const char *argv[], int argc)
 			argc -= 2;
 		} else if (!strcmp(argv[0], "fwmark") && argc >= 2 && !peer) {
 			if (!parse_fwmark(&device->fwmark, &device->flags, argv[1]))
+				goto error;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "lowerdev") && argc >= 2 && !peer) {
+			if (!parse_lowerdev(&device->lowerdev, &device->flags, argv[1]))
 				goto error;
 			argv += 2;
 			argc -= 2;

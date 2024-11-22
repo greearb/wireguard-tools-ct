@@ -25,6 +25,11 @@
 #include "ipc-uapi-unix.h"
 #endif
 
+/* Seems to be including OS's version of wireguard.h instead of local
+ * to this repo, so hack in the new API here.
+ */
+#define _WGDEVICE_A_LOWERDEV (WGDEVICE_A_PEERS + 1)
+
 static int userspace_set_device(struct wgdevice *dev)
 {
 	char hex[WG_KEY_LEN_HEX], ip[INET6_ADDRSTRLEN], host[4096 + 1], service[512 + 1];
@@ -49,6 +54,8 @@ static int userspace_set_device(struct wgdevice *dev)
 		fprintf(f, "listen_port=%u\n", dev->listen_port);
 	if (dev->flags & WGDEVICE_HAS_FWMARK)
 		fprintf(f, "fwmark=%u\n", dev->fwmark);
+	if (dev->flags & WGDEVICE_HAS_LOWERDEV)
+		fprintf(f, "lowerdev=%d\n", dev->lowerdev);
 	if (dev->flags & WGDEVICE_REPLACE_PEERS)
 		fprintf(f, "replace_peers=true\n");
 
@@ -183,6 +190,12 @@ static int userspace_get_device(struct wgdevice **out, const char *iface)
 		} else if (!peer && !strcmp(key, "fwmark")) {
 			dev->fwmark = NUM(0xffffffffU);
 			dev->flags |= WGDEVICE_HAS_FWMARK;
+		} else if (!peer && !strcmp(key, "lowerdev")) {
+			if (strcasecmp(value, "off") == 0)
+				dev->lowerdev = 0;
+			else
+				dev->lowerdev = if_nametoindex(value);
+			dev->flags |= WGDEVICE_HAS_LOWERDEV;
 		} else if (!strcmp(key, "public_key")) {
 			struct wgpeer *new_peer = calloc(1, sizeof(*new_peer));
 

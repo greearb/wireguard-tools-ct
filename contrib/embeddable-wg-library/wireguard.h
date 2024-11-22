@@ -67,7 +67,8 @@ enum wg_device_flags {
 	WGDEVICE_HAS_PRIVATE_KEY = 1U << 1,
 	WGDEVICE_HAS_PUBLIC_KEY = 1U << 2,
 	WGDEVICE_HAS_LISTEN_PORT = 1U << 3,
-	WGDEVICE_HAS_FWMARK = 1U << 4
+	WGDEVICE_HAS_FWMARK = 1U << 4,
+	WGDEVICE_HAS_LOWERDEV = 1U << 5,
 };
 
 typedef struct wg_device {
@@ -80,6 +81,7 @@ typedef struct wg_device {
 	wg_key private_key;
 
 	uint32_t fwmark;
+	uint32_t lowerdev;
 	uint16_t listen_port;
 
 	struct wg_peer *first_peer, *last_peer;

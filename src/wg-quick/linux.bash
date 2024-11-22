@@ -13,6 +13,7 @@ export PATH="${SELF%/*}:$PATH"
 
 WG_CONFIG=""
 INTERFACE=""
+LOWERDEV="off"
 ADDRESSES=( )
 MTU=""
 DNS=( )
@@ -53,6 +54,9 @@ parse_options() {
 		value="${stripped#*=}"; value="${value##*([[:space:]])}"; value="${value%%*([[:space:]])}"
 		[[ $key == "["* ]] && interface_section=0
 		[[ $key == "[Interface]" ]] && interface_section=1
+		case "$key" in
+		    LowerDev) LOWERDEV="$value"; continue ;;
+		esac
 		if [[ $interface_section -eq 1 ]]; then
 			case "$key" in
 			Address) ADDRESSES+=( ${value//,/ } ); continue ;;
@@ -93,6 +97,7 @@ add_if() {
 		echo "[!] Missing WireGuard kernel module. Falling back to slow userspace implementation." >&2
 		cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" "$INTERFACE"
 	fi
+	cmd wg set "$INTERFACE" lowerdev "$LOWERDEV"
 }
 
 del_if() {
@@ -183,6 +188,14 @@ get_fwmark() {
 	fwmark="$(wg show "$INTERFACE" fwmark)" || return 1
 	[[ -n $fwmark && $fwmark != off ]] || return 1
 	printf -v "$1" "%d" "$fwmark"
+	return 0
+}
+
+get_lowerdev() {
+	local lowerdev
+	lowerdev="$(wg show "$INTERFACE" lowerdev)" || return 1
+	[[ -n $lowerdev && $lowerdev != off ]] || return 1
+	printf -v "$1" "%d" "$lowerdev"
 	return 0
 }
 

@@ -48,6 +48,7 @@ enum wgdevice_attribute {
 	WGDEVICE_A_LISTEN_PORT,
 	WGDEVICE_A_FWMARK,
 	WGDEVICE_A_PEERS,
+	WGDEVICE_A_LOWERDEV,
 	__WGDEVICE_A_LAST
 };
 
@@ -1087,6 +1088,8 @@ again:
 			mnl_attr_put_u16(nlh, WGDEVICE_A_LISTEN_PORT, dev->listen_port);
 		if (dev->flags & WGDEVICE_HAS_FWMARK)
 			mnl_attr_put_u32(nlh, WGDEVICE_A_FWMARK, dev->fwmark);
+		if (dev->flags & WGDEVICE_HAS_LOWERDEV)
+			mnl_attr_put_u32(nlh, WGDEVICE_A_LOWERDEV, dev->lowerdev);
 		if (dev->flags & WGDEVICE_REPLACE_PEERS)
 			flags |= WGDEVICE_F_REPLACE_PEERS;
 		if (flags)
@@ -1372,6 +1375,10 @@ static int parse_device(const struct nlattr *attr, void *data)
 	case WGDEVICE_A_FWMARK:
 		if (!mnl_attr_validate(attr, MNL_TYPE_U32))
 			device->fwmark = mnl_attr_get_u32(attr);
+		break;
+	case WGDEVICE_A_LOWERDEV:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U32))
+			device->lowerdev = mnl_attr_get_u32(attr);
 		break;
 	case WGDEVICE_A_PEERS:
 		return mnl_attr_parse_nested(attr, parse_peers, device);
